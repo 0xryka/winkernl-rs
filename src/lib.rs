@@ -124,6 +124,7 @@
 #![allow(improper_ctypes)]
 
 extern crate alloc;
+pub extern crate x86_64;
 use alloc::vec::Vec;
 use core::{ptr, slice};
 use core::ffi::c_void;
