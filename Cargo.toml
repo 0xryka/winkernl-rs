@@ -1,0 +1,21 @@
+[package]
+name = "winkernl-rs"
+version = "0.1.1"
+edition = "2024"
+license = "MIT"
+
+[features]
+default = ["bundled-wdk"]
+wdk-auto = []
+bundled-wdk = []
+
+[dependencies]
+iced-x86 = { version = "1.21.0", default-features = false, features = ["no_std", "decoder"] }
+x86_64 = "=0.15.4"
+[profile.release]
+panic = "abort"
+
+
+[build-dependencies]
+winreg = "0.56.0"
+bindgen = "0.72.1"
