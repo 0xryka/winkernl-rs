@@ -118,6 +118,9 @@ pub enum KhookErr {
 
     /// Failed to allocate the executable trampoline.
     AllocationFailed,
+
+    /// encode block Instruction Error
+    BlockInsn,
 }
 
 
@@ -231,22 +234,29 @@ impl KHook {
 
         let mut decoder = Decoder::with_ip(64, src_slice, src_address, DecoderOptions::NONE);
         let mut copied = 0usize;
-
+        let mut insn_block = Vec::with_capacity(MAX_HOOK_SIZE);
         while copied < MAX_HOOK_SIZE {
             let inst = decoder.decode();
             if inst.mnemonic() == Mnemonic::INVALID {
                 return Err(KhookErr::InvalidInsn)
             }
             copied += inst.len();
+            insn_block.push(inst);
         }
 
-        let original_bytes = src_slice[..copied].to_vec();
         let mut original_stub = PoolMemorySlice::new_with_pool_type(0u8, copied + HOOK_SIZE_ABSOLUTE, POOL_TYPE::NonPagedPoolExecute).ok_or(KhookErr::AllocationFailed)?;
-        original_stub[..copied].copy_from_slice(&original_bytes);
-        let jump_ip = original_stub.as_ptr() as u64 + copied as u64;
+        let mut original_stub_addr = original_stub.as_ptr() as u64;
+        let encoded_insn = InstructionBlock::new(&insn_block, original_stub_addr);
+        let new_insn = BlockEncoder::encode(64, encoded_insn, BlockEncoderOptions::NONE).map_err(|_| KhookErr::BlockInsn)?;
+        let encoded_len = new_insn.code_buffer.len();
+        original_stub[..encoded_len].copy_from_slice(&new_insn.code_buffer);
+
+
+        let jump_ip = original_stub_addr + encoded_len as u64;
         let target_jump = src as u64 + copied as u64;
         let asm_jump = Self::create_assembly_jump(jump_ip, target_jump);
-        original_stub[copied..copied+asm_jump.len()].copy_from_slice(asm_jump.as_slice());
+        original_stub[encoded_len..encoded_len+asm_jump.len()].copy_from_slice(asm_jump.as_slice());
+        let original_bytes = src_slice.to_vec();
         Ok(Self {
             src, dst, original_stub, original_bytes, enabled: false,
         })
