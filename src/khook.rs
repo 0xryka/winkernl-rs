@@ -110,13 +110,13 @@ pub const MAX_HOOK_SIZE: usize = HOOK_SIZE_ABSOLUTE;
 const MOV_ABS_SIZE: usize = 10;
 const JMP_REG_MAX_SIZE: usize = 3;
 
-/// Errors that can occur while constructing a hook.
+/// Errors that can occur while constructing a hook
 #[derive(Debug)]
 pub enum KhookErr {
-    /// The instruction decoder encountered an invalid instruction.
+    /// The instruction decoder encountered an invalid instruction
     InvalidInsn,
 
-    /// Failed to allocate the executable trampoline.
+    /// Failed to allocate the executable trampoline
     AllocationFailed,
 
     /// encode block Instruction Error
@@ -218,13 +218,13 @@ impl KHook {
         }
     }
 
-    /// Creates a new hook without installing it.
+    /// Creates a new hook without installing it
     ///
     /// This allocates an executable trampoline containing the overwritten
     /// instructions followed by a jump back into the original function.
     ///
-    /// If `ignore_rip_relative` is `false`, hook creation fails whenever a
-    /// RIP-relative instruction is encountered.
+    /// The instructions overwritten at `src` are decoded and relocated into the
+    /// trampoline before execution returns to the original function
     pub fn new(src: *mut u8, dst: *mut u8) -> Result<Self, KhookErr> {
         let src_address = src as u64;
 
@@ -245,9 +245,9 @@ impl KHook {
         }
 
         let mut original_stub = PoolMemorySlice::new_with_pool_type(0u8, copied + HOOK_SIZE_ABSOLUTE, POOL_TYPE::NonPagedPoolExecute).ok_or(KhookErr::AllocationFailed)?;
-        let mut original_stub_addr = original_stub.as_ptr() as u64;
-        let encoded_insn = InstructionBlock::new(&insn_block, original_stub_addr);
-        let new_insn = BlockEncoder::encode(64, encoded_insn, BlockEncoderOptions::NONE).map_err(|_| KhookErr::BlockInsn)?;
+        let original_stub_addr = original_stub.as_ptr() as u64;
+        let block_insn = InstructionBlock::new(&insn_block, original_stub_addr);
+        let new_insn = BlockEncoder::encode(64, block_insn, BlockEncoderOptions::NONE).map_err(|_| KhookErr::BlockInsn)?;
         let encoded_len = new_insn.code_buffer.len();
         original_stub[..encoded_len].copy_from_slice(&new_insn.code_buffer);
 

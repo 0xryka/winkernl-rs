@@ -10,7 +10,7 @@ wdk-auto = []
 bundled-wdk = []
 
 [dependencies]
-iced-x86 = { version = "1.21.0", default-features = false, features = ["no_std", "decoder", "encoder", "block_encoder", "code_asm"] }
+iced-x86 = { version = "1.21.0", default-features = false, features = ["no_std", "decoder", "encoder", "block_encoder"] }
 x86_64 = "=0.15.4"
 [profile.release]
 panic = "abort"
@@ -18,4 +18,3 @@ panic = "abort"
 
 [build-dependencies]
 winreg = "0.56.0"
-bindgen = "0.72.1"

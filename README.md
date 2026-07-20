@@ -85,7 +85,7 @@ winkernl-rs = { git = "https://githubcom/0xryka/winkernl-rs" }
 
 ```toml
 [dependencies]
-winkernl-rs = { git = "https://githubcom/0xryka/winkernl-rs", tag = "0.1.0" }
+winkernl-rs = { git = "https://githubcom/0xryka/winkernl-rs", tag = "0.1.1" }
 ```
 
 ### Specific commit
