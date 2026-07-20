@@ -113,12 +113,6 @@ const JMP_REG_MAX_SIZE: usize = 3;
 /// Errors that can occur while constructing a hook.
 #[derive(Debug)]
 pub enum KhookErr {
-    /// A RIP-relative instruction was encountered.
-    ///
-    /// Since relocating such instructions requires rewriting their
-    /// displacement, hook creation is aborted unless explicitly allowed.
-    InsnRel,
-
     /// The instruction decoder encountered an invalid instruction.
     InvalidInsn,
 
@@ -228,7 +222,7 @@ impl KHook {
     ///
     /// If `ignore_rip_relative` is `false`, hook creation fails whenever a
     /// RIP-relative instruction is encountered.
-    pub fn new(src: *mut u8, dst: *mut u8, ignore_rip_relative: bool) -> Result<Self, KhookErr> {
+    pub fn new(src: *mut u8, dst: *mut u8) -> Result<Self, KhookErr> {
         let src_address = src as u64;
 
         let src_slice = unsafe {
@@ -242,9 +236,6 @@ impl KHook {
             let inst = decoder.decode();
             if inst.mnemonic() == Mnemonic::INVALID {
                 return Err(KhookErr::InvalidInsn)
-            }
-            if inst.is_ip_rel_memory_operand() && !ignore_rip_relative {
-                return Err(KhookErr::InsnRel);
             }
             copied += inst.len();
         }
