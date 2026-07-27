@@ -94,6 +94,10 @@ pub struct KHook {
     enabled: bool,
 }
 
+
+unsafe impl Send for KHook {}
+unsafe impl Sync for KHook {}
+
 /// Size, in bytes, of a relative `jmp rel32` instruction.
 pub const HOOK_SIZE_RELATIVE: usize = 5;
 /// Maximum size, in bytes, of the absolute jump sequence.
