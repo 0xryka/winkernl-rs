@@ -70,16 +70,25 @@ unsafe impl GlobalAlloc for KernelAllocator {
     /// Returns a valid pointer on success, or a null pointer if the
     /// allocation fails.
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        let align = layout.align();
         let size = layout.size();
-        let mem = unsafe {
-            ExAllocatePool(POOL_TYPE::NonPagedPool, size as _)
-        };
 
-        if mem.is_null() {
-            ptr::null_mut()
-        } else {
-            mem.cast()
+
+        let ext = align.saturating_sub(1) + size_of::<*mut u8>();
+
+        let base = unsafe {ExAllocatePool(POOL_TYPE::NonPagedPool, (size + ext) as _)} as *mut u8;
+
+        if base.is_null() {
+            return ptr::null_mut();
         }
+
+        let start = unsafe { base.add(size_of::<*mut u8>()) };
+        let aligned = start.align_offset(align);
+        let ptr = unsafe { start.add(aligned) };
+        unsafe {
+            (ptr as *mut *mut u8).offset(-1).write(base);
+        }
+        ptr
     }
 
     /// Releases a block previously allocated by [`KernelAllocator`].
@@ -89,10 +98,12 @@ unsafe impl GlobalAlloc for KernelAllocator {
     /// The `layout` parameter is ignored since `ExFreePool` only requires
     /// the allocation address.
     unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout) {
-        if !ptr.is_null() {
-            unsafe {
-                ExFreePool(ptr as _);
-            }
+        if ptr.is_null() {
+            return;
+        }
+        let base = unsafe { (ptr as *mut *mut u8).offset(-1).read() };
+        unsafe {
+            ExFreePool(base as _);
         }
     }
 }
