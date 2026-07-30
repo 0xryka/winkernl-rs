@@ -295,6 +295,8 @@ pub struct ContiguousMemorySlice<T> {
     mm_caching: MEMORY_CACHING_TYPE,
 }
 
+unsafe impl<T: Send> Send for ContiguousMemorySlice<T> {}
+unsafe impl<T: Sync> Sync for ContiguousMemorySlice<T> {}
 
 impl<T> ContiguousMemorySlice<T> {
     #[inline(always)]

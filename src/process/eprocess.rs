@@ -13,7 +13,7 @@ use core::sync::atomic::{AtomicU64, Ordering};
 use iced_x86::{Decoder, DecoderOptions, Mnemonic, OpKind, Register};
 use crate::memory::module::resolve_system_routine;
 use crate::{RtlGetVersion, PAGE_SIZE, PEPROCESS, RTL_OSVERSIONINFOW};
-use crate::process::SearchError;
+use crate::process::{get_initial_system_process, SearchError};
 
 /// Returns the offset of the `ActiveProcessLinks` member within the
 /// [`EPROCESS`](https://www.vergiliusproject.com/kernels/x64/windows-11/25h2/_EPROCESS) structure for the current Windows builds.
@@ -40,12 +40,17 @@ use crate::process::SearchError;
 /// | Other builds  | `0x448` |
 pub fn get_active_process_links_offset() -> usize {
     unsafe {
-        let mut os_version = RTL_OSVERSIONINFOW::default();
-        os_version.dwOSVersionInfoSize = size_of::<RTL_OSVERSIONINFOW>() as u32;
+        let mut os_version = RTL_OSVERSIONINFOW {
+            dwOSVersionInfoSize: size_of::<RTL_OSVERSIONINFOW>() as u32,
+            ..Default::default()
+        };
+
         RtlGetVersion(&mut os_version);
-        match os_version.dwBuildNumber {
-            26100 | 26200 => 0x1D8,
-            _ => 0x448,
+
+        if os_version.dwBuildNumber >= 26100 {
+            0x1D8
+        } else {
+            0x448
         }
     }
 }
@@ -189,7 +194,6 @@ pub fn find_structure_offset(function_address: u64) -> Option<u64> {
             && instruction.op1_kind() == OpKind::Memory
             && instruction.memory_base() == Register::RCX
             && instruction.memory_index() == Register::None
-            && instruction.memory_segment() == Register::None
         {
             return Some(instruction.memory_displacement64());
         }
@@ -386,5 +390,6 @@ pub fn initialize_cached_offsets() -> Result<bool, SearchError> {
             return Ok(false);
         }
     }
+    get_initial_system_process()?;
     Ok(true)
 }
